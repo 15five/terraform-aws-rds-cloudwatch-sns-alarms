@@ -142,3 +142,39 @@ resource "aws_cloudwatch_metric_alarm" "swap_usage_too_high" {
     DBInstanceIdentifier = var.db_instance_ids[count.index]
   }
 }
+
+resource "aws_cloudwatch_metric_alarm" "rapid-space-increase" {
+  count               = length(var.db_instance_ids)
+  alarm_name          = "${var.name_prefix}${var.db_instance_ids[count.index]}-rapid-space"
+  comparison_operator       = "GreaterThanOrEqualToThreshold"
+  evaluation_periods        = "2"
+  threshold                 = "10"
+  alarm_description         = "Request error rate has exceeded 10%"
+  insufficient_data_actions = [aws_sns_topic.alert.arn]
+  ok_actions                = [aws_sns_topic.alert.arn]
+  alarm_actions             = [aws_sns_topic.alert.arn]
+
+  metric_query {
+    id          = "e1"
+    expression  = "(m3+m2)/m1*100"
+    label       = "Error Rate"
+    return_data = "true"
+  }
+
+  metric_query {
+    id = "m1"
+
+    metric {
+      metric_name = "RequestCount"
+      namespace   = "AWS/ApplicationELB"
+      period      = "120"
+      stat        = "Sum"
+      unit        = "Count"
+
+      dimensions = {
+        LoadBalancer = aws_lb.web_alb.arn_suffix
+      }
+    }
+  }
+
+}
