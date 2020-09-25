@@ -20,7 +20,7 @@ resource "aws_cloudwatch_metric_alarm" "burst_balance_too_low" {
   period              = var.period
   statistic           = "Average"
   threshold           = local.thresholds["BurstBalanceThreshold"]
-  alarm_description   = "Average database storage burst balance over last ${var.period/60} minutes too low, expect a significant performance drop soon"
+  alarm_description   = "Average database storage burst balance over last ${var.period / 60} minutes too low, expect a significant performance drop soon"
   alarm_actions       = [var.aws_sns_topic_arn]
   ok_actions          = [var.aws_sns_topic_arn]
 
@@ -39,7 +39,7 @@ resource "aws_cloudwatch_metric_alarm" "cpu_utilization_too_high" {
   period              = var.period
   statistic           = "Average"
   threshold           = local.thresholds["CPUUtilizationThreshold"]
-  alarm_description   = "Average database CPU utilization over last ${var.period/60} minutes too high"
+  alarm_description   = "Average database CPU utilization over last ${var.period / 60} minutes too high"
   alarm_actions       = [var.aws_sns_topic_arn]
   ok_actions          = [var.aws_sns_topic_arn]
 
@@ -58,7 +58,7 @@ resource "aws_cloudwatch_metric_alarm" "cpu_credit_balance_too_low" {
   period              = var.period
   statistic           = "Average"
   threshold           = local.thresholds["CPUCreditBalanceThreshold"]
-  alarm_description   = "Average database CPU credit balance over last ${var.period/60} minutes too low, expect a significant performance drop soon"
+  alarm_description   = "Average database CPU credit balance over last ${var.period / 60} minutes too low, expect a significant performance drop soon"
   alarm_actions       = [var.aws_sns_topic_arn]
   ok_actions          = [var.aws_sns_topic_arn]
 
@@ -77,7 +77,7 @@ resource "aws_cloudwatch_metric_alarm" "disk_queue_depth_too_high" {
   period              = var.period
   statistic           = "Average"
   threshold           = local.thresholds["DiskQueueDepthThreshold"]
-  alarm_description   = "Average database disk queue depth over last ${var.period/60} minutes too high, performance may suffer"
+  alarm_description   = "Average database disk queue depth over last ${var.period / 60} minutes too high, performance may suffer"
   alarm_actions       = [var.aws_sns_topic_arn]
   ok_actions          = [var.aws_sns_topic_arn]
 
@@ -96,7 +96,7 @@ resource "aws_cloudwatch_metric_alarm" "freeable_memory_too_low" {
   period              = var.period
   statistic           = "Average"
   threshold           = local.thresholds["FreeableMemoryThreshold"]
-  alarm_description   = "Average database freeable memory over last ${var.period/60} minutes too low, performance may suffer"
+  alarm_description   = "Average database freeable memory over last ${var.period / 60} minutes too low, performance may suffer"
   alarm_actions       = [var.aws_sns_topic_arn]
   ok_actions          = [var.aws_sns_topic_arn]
 
@@ -115,7 +115,7 @@ resource "aws_cloudwatch_metric_alarm" "free_storage_space_too_low" {
   period              = var.period
   statistic           = "Average"
   threshold           = local.thresholds["FreeStorageSpaceThreshold"]
-  alarm_description   = "Average database free storage space over last ${var.period/60} minutes too low"
+  alarm_description   = "Average database free storage space over last ${var.period / 60} minutes too low"
   alarm_actions       = [var.aws_sns_topic_arn]
   ok_actions          = [var.aws_sns_topic_arn]
 
@@ -134,7 +134,7 @@ resource "aws_cloudwatch_metric_alarm" "swap_usage_too_high" {
   period              = var.period
   statistic           = "Average"
   threshold           = local.thresholds["SwapUsageThreshold"]
-  alarm_description   = "Average database swap usage over last ${var.period/60} minutes too high, performance may suffer"
+  alarm_description   = "Average database swap usage over last ${var.period / 60} minutes too high, performance may suffer"
   alarm_actions       = [var.aws_sns_topic_arn]
   ok_actions          = [var.aws_sns_topic_arn]
 
@@ -143,38 +143,32 @@ resource "aws_cloudwatch_metric_alarm" "swap_usage_too_high" {
   }
 }
 
-resource "aws_cloudwatch_metric_alarm" "rapid-space-increase" {
-  count               = length(var.db_instance_ids)
-  alarm_name          = "${var.name_prefix}${var.db_instance_ids[count.index]}-rapid-space"
-  comparison_operator       = "GreaterThanOrEqualToThreshold"
-  evaluation_periods        = "2"
-  threshold                 = "10"
-  alarm_description         = "Request error rate has exceeded 10%"
+resource "aws_cloudwatch_metric_alarm" "rapid-free-space-decrease" {
+  count                     = length(var.db_master_ids)
+  alarm_name                = "${var.name_prefix}${var.db_master_ids[count.index]}-rapid-free-space-decrease"
+  comparison_operator       = "LessThanOrEqualToThreshold"
+  evaluation_periods        = "1"
+  threshold                 = "-3000000000"
+  alarm_description         = "RDS Free storage space"
   insufficient_data_actions = [aws_sns_topic.alert.arn]
   ok_actions                = [aws_sns_topic.alert.arn]
   alarm_actions             = [aws_sns_topic.alert.arn]
 
   metric_query {
-    id          = "e1"
-    expression  = "(m3+m2)/m1*100"
-    label       = "Error Rate"
-    return_data = "true"
-  }
-
-  metric_query {
-    id = "m1"
+    id = "velocity"
 
     metric {
-      metric_name = "RequestCount"
-      namespace   = "AWS/ApplicationELB"
-      period      = "120"
-      stat        = "Sum"
-      unit        = "Count"
+      metric_name = "FreeStorageSpace"
+      namespace   = "AWS/RDS"
+      period      = "180"
+      stat        = "Average"
+      unit        = "Bytes/Second"
 
       dimensions = {
-        LoadBalancer = aws_lb.web_alb.arn_suffix
+        DBInstanceIdentifier = var.db_master_ids[count.index]
       }
     }
+    return_data = "true"
   }
 
 }
