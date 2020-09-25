@@ -150,9 +150,9 @@ resource "aws_cloudwatch_metric_alarm" "rapid-free-space-decrease" {
   evaluation_periods        = "1"
   threshold                 = "-3000000000"
   alarm_description         = "RDS Free storage space"
-  insufficient_data_actions = [aws_sns_topic.alert.arn]
-  ok_actions                = [aws_sns_topic.alert.arn]
-  alarm_actions             = [aws_sns_topic.alert.arn]
+  insufficient_data_actions = [var.aws_sns_topic_arn]
+  ok_actions                = [var.aws_sns_topic_arn]
+  alarm_actions             = [var.aws_sns_topic_arn]
 
   metric_query {
     id = "velocity"
