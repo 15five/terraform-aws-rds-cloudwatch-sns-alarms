@@ -1,3 +1,11 @@
+terraform {
+  required_providers {
+    aws = {
+      version = ">= 2.7.0"
+    }
+  }
+}
+
 data "aws_caller_identity" "default" {}
 
 resource "aws_db_event_subscription" "default" {
